@@ -8,16 +8,16 @@ const blankHole = () => ({ par: null, hcp: null, g: null, s: null, p: null });
 
 function load() {
   const raw = localStorage.getItem(KEY);
-  if (!raw) return { course: '', holes: Array.from({ length: HOLES }, blankHole) };
+  if (!raw) return { course: '', handicap: '', holes: Array.from({ length: HOLES }, blankHole) };
   try {
     const d = JSON.parse(raw);
     const holes = Array.from({ length: HOLES }, (_, i) => Object.assign(blankHole(), (d.holes || [])[i]));
-    return { course: d.course || '', holes };
+    return { course: d.course || '', handicap: d.handicap || '', holes };
   } catch (e) {
     // No sobrescribir datos que no se han podido leer
     localStorage.setItem(KEY + '-backup-' + Date.now(), raw);
     alert('No se pudieron leer los datos guardados. Se ha hecho una copia de seguridad.');
-    return { course: '', holes: Array.from({ length: HOLES }, blankHole) };
+    return { course: '', handicap: '', holes: Array.from({ length: HOLES }, blankHole) };
   }
 }
 
@@ -31,6 +31,19 @@ const sum = (from, to, f) => {
   for (let i = from; i < to; i++) { const v = state.holes[i][f]; if (v != null) { t += v; any = true; } }
   return any ? t : null;
 };
+// Hándicap del jugador como número (admite coma decimal), o null si está vacío
+const handicapValue = () => {
+  const v = parseFloat(String(state.handicap).replace(',', '.'));
+  return Number.isFinite(v) ? v : null;
+};
+
+// Puntos del hoyo según golpes, par, dificultad y hándicap.
+// Pendiente: la regla de cálculo la dará el usuario. Devuelve null mientras tanto.
+function holePoints(h, handicap) {
+  return null;
+}
+const pointsOf = (i) => holePoints(state.holes[i], handicapValue());
+
 const show = (v) => (v == null ? '' : String(v));
 const signed = (d) => (d === 0 ? 'E' : d > 0 ? '+' + d : String(d));
 
@@ -62,6 +75,7 @@ function holeRow(i) {
     if (f === 'g') td.className = 'split';
     td.append(cellInput(i, f)); tr.append(td);
   }
+  const pts = document.createElement('td'); pts.className = 'pts'; tr.append(pts);
   return tr;
 }
 
@@ -69,7 +83,8 @@ function totalRow(label, cls) {
   const tr = document.createElement('tr');
   tr.className = 'total ' + cls;
   tr.innerHTML = `<td class="lbl">${label}</td><td data-t="par"></td><td></td>
-    <td class="split" data-t="g"></td><td data-t="s"></td><td data-t="p"></td>`;
+    <td class="split" data-t="g"></td><td data-t="s"></td><td data-t="p"></td>
+    <td class="pts" data-t="pts"></td>`;
   return tr;
 }
 
@@ -81,6 +96,7 @@ function build() {
   }
   const all = totalRow('Total', 'grand'); all.range = [0, 18]; totals.push(all); rowsEl.append(all);
   $('course').value = state.course;
+  $('handicap').value = state.handicap;
 }
 
 function refreshRow(i) {
@@ -89,6 +105,10 @@ function refreshRow(i) {
   // Los golpes cortos más los putts no pueden superar el total de golpes
   const bad = h.g != null && (h.s || 0) + (h.p || 0) > h.g;
   for (const f of ['g', 's', 'p']) tr.querySelector(`[data-f="${f}"]`).classList.toggle('warn', bad);
+  const pts = pointsOf(i);
+  const ptd = tr.querySelector('td.pts');
+  ptd.textContent = pts == null ? '–' : pts;
+  ptd.classList.toggle('empty', pts == null);
   const b = tr.querySelector('[data-hcp]');
   b.textContent = h.hcp == null ? '–' : h.hcp;
   b.classList.toggle('empty', h.hcp == null);
@@ -99,6 +119,10 @@ function refreshTotals() {
   for (const t of totals) {
     for (const f of ['par', 'g', 's', 'p']) t.querySelector(`[data-t="${f}"]`).textContent = show(sum(t.range[0], t.range[1], f));
   }
+  let pt = 0, anyPt = false;
+  for (let i = 0; i < HOLES; i++) { const v = pointsOf(i); if (v != null) { pt += v; anyPt = true; } }
+  for (const t of totals) t.querySelector('[data-t="pts"]').textContent = anyPt ? pt : '';
+  $('sumPoints').textContent = anyPt ? pt : '–';
   const g = sum(0, HOLES, 'g');
   $('sumStrokes').textContent = g == null ? '–' : g;
   const par = sum(0, HOLES, 'par');
@@ -143,6 +167,13 @@ rowsEl.addEventListener('keydown', (e) => {
 });
 
 $('course').addEventListener('input', (e) => { state.course = e.target.value; save(); });
+$('handicap').addEventListener('input', (e) => {
+  const clean = e.target.value.replace(/[^\d.,]/g, '');
+  if (clean !== e.target.value) e.target.value = clean;
+  state.handicap = clean;
+  save(); refreshAll();
+});
+$('handicap').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
 $('course').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
 
 // --- Selector de dificultad ---
@@ -187,6 +218,7 @@ $('sheetBack').addEventListener('click', closeSheet);
 function reloadInputs() {
   rowsEl.querySelectorAll('input[data-f]').forEach((inp) => { inp.value = show(state.holes[+inp.dataset.i][inp.dataset.f]); });
   $('course').value = state.course;
+  $('handicap').value = state.handicap;
   refreshAll();
 }
 $('newRound').addEventListener('click', () => {

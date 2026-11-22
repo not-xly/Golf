@@ -18,22 +18,28 @@
 </head>
 <body>
   <header class="top">
-    <input id="course" class="course" type="text" placeholder="Nombre del campo" autocomplete="off" enterkeyhint="done">
+    <div class="head-row">
+      <input id="course" class="course" type="text" placeholder="Nombre del campo" autocomplete="off" enterkeyhint="done">
+      <label class="handicap"><span>Hándicap</span>
+        <input id="handicap" type="text" inputmode="decimal" maxlength="5" placeholder="–" autocomplete="off" enterkeyhint="done">
+      </label>
+    </div>
     <div class="summary">
       <div class="stat"><span class="num" id="sumStrokes">–</span><span class="lbl">golpes</span></div>
       <div class="stat"><span class="num" id="sumDiff">–</span><span class="lbl">vs par</span></div>
       <div class="stat"><span class="num" id="sumPar">–</span><span class="lbl">par</span></div>
       <div class="stat"><span class="num" id="sumPutts">–</span><span class="lbl">putts</span></div>
+      <div class="stat"><span class="num" id="sumPoints">–</span><span class="lbl">puntos</span></div>
     </div>
     <table class="cols">
-      <colgroup><col class="c-hole"><col class="c-par"><col class="c-hcp"><col class="c-g"><col class="c-s"><col class="c-p"></colgroup>
-      <tr><th>Hoyo</th><th>Par</th><th>Dific.</th><th>Golpes</th><th>&lt;100&nbsp;m</th><th>Putts</th></tr>
+      <colgroup><col class="c-hole"><col class="c-par"><col class="c-hcp"><col class="c-g"><col class="c-s"><col class="c-p"><col class="c-pt"></colgroup>
+      <tr><th>Hoyo</th><th>Par</th><th>Dific.</th><th>Golpes</th><th>&lt;100&nbsp;m</th><th>Putts</th><th>Puntos</th></tr>
     </table>
   </header>
 
   <main>
     <table class="card" id="card">
-      <colgroup><col class="c-hole"><col class="c-par"><col class="c-hcp"><col class="c-g"><col class="c-s"><col class="c-p"></colgroup>
+      <colgroup><col class="c-hole"><col class="c-par"><col class="c-hcp"><col class="c-g"><col class="c-s"><col class="c-p"><col class="c-pt"></colgroup>
       <tbody id="rows"></tbody>
     </table>
 

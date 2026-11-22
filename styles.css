@@ -19,20 +19,27 @@ button { font: inherit; }
 
 .top { flex: none; z-index: 3; background: var(--bg);
   padding: calc(env(safe-area-inset-top) + 8px) 8px 0; }
-.course { width: calc(100% - 8px); margin: 0 4px; border: 0; background: transparent; color: var(--text);
+.head-row { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
+.handicap { flex: none; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.handicap input { width: 64px; height: 34px; border: 1.5px solid transparent; border-radius: 8px; background: var(--card);
+  color: var(--text); text-align: center; font-size: 17px; font-weight: 600; outline: none; padding: 0; }
+.handicap input:focus { border-color: var(--accent); }
+.course { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text);
   font-size: 22px; font-weight: 700; padding: 4px 2px; outline: none; }
 .course::placeholder { color: var(--muted); font-weight: 600; }
-.summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; }
+.summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 4px; }
 .stat { background: var(--card); border-radius: 10px; padding: 6px 4px; text-align: center; }
-.stat .num { display: block; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat .num { display: block; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .stat .lbl { font-size: 11px; color: var(--muted); }
 
 main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain; padding: 0 8px calc(env(safe-area-inset-bottom) + 16px); }
 .card { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--card);
   border-radius: 12px; table-layout: fixed; font-variant-numeric: tabular-nums; }
-.c-hole { width: 13%; } .c-par { width: 16%; } .c-hcp { width: 16%; }
-.c-g { width: 19%; } .c-s { width: 18%; } .c-p { width: 18%; }
+.c-hole { width: 11%; } .c-par { width: 13%; } .c-hcp { width: 13%; }
+.c-g { width: 16%; } .c-s { width: 15%; } .c-p { width: 15%; } .c-pt { width: 17%; }
+td.pts { font-size: 17px; font-weight: 700; border-left: 1px solid var(--line); }
+td.pts.empty { color: var(--muted); font-weight: 400; }
 .cols { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; margin-top: 8px;
   background: var(--card); border-radius: 12px 12px 0 0; border-bottom: 1px solid var(--line); }
 .cols th { font-size: 12px; font-weight: 600; color: var(--muted); padding: 8px 0 7px; white-space: nowrap; }
