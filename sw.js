@@ -1,6 +1,6 @@
 // Service worker: guarda la app para usarla sin conexión.
 // Red primero con límite de tiempo; si no hay red o tarda, usa la copia guardada.
-const CACHE_VERSION = 'golf-v3';
+const CACHE_VERSION = 'golf-v4';
 const NETWORK_TIMEOUT = 3000;
 const APP_SHELL = [
   './', './index.html', './styles.css', './app.js',

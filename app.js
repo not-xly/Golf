@@ -2,7 +2,7 @@
 // Tarjeta de golf: par y dificultad por hoyo (datos del campo) y golpes de la ronda.
 const KEY = 'golf-v1';
 const HOLES = 18;
-const MAX_HCP = 9;
+const MAX_HCP = 18;
 
 const blankHole = () => ({ par: null, hcp: null, g: null, s: null, p: null });
 
@@ -37,12 +37,37 @@ const handicapValue = () => {
   return Number.isFinite(v) ? v : null;
 };
 
-// Puntos del hoyo según golpes, par, dificultad y hándicap.
-// Pendiente: la regla de cálculo la dará el usuario. Devuelve null mientras tanto.
-function holePoints(h, handicap) {
-  return null;
+// Golpes de ventaja en un hoyo: hándicap redondeado repartido por dificultad
+// (1 = el más difícil). Con 20 de hándicap: 1 golpe en todos y 2 en los de dificultad 1 y 2.
+// Hándicap negativo: se devuelven golpes en los hoyos más fáciles.
+// Devuelve null si hace falta la dificultad del hoyo y no está puesta.
+function strokesReceived(i, handicap) {
+  const hc = Math.round(handicap);
+  const n = Math.abs(hc);
+  const base = Math.floor(n / HOLES), rest = n % HOLES;
+  let extra = 0;
+  if (rest > 0) {
+    // Dificultades que reciben (o devuelven) el golpe sobrante
+    const lo = hc > 0 ? 1 : HOLES - rest + 1, hi = hc > 0 ? rest : HOLES;
+    const si = state.holes[i].hcp;
+    if (si != null) extra = si >= lo && si <= hi ? 1 : 0;
+    else {
+      // Sin dificultad: solo se sabe si esos números ya están en otros hoyos
+      for (let k = lo; k <= hi; k++) if (!state.holes.some((h) => h.hcp === k)) return null;
+    }
+  }
+  return Math.sign(hc) * (base + extra);
 }
-const pointsOf = (i) => holePoints(state.holes[i], handicapValue());
+
+// Puntos Stableford: 2 por hacer el par neto, +1 por cada golpe menos, −1 por cada golpe más, mínimo 0.
+function holePoints(i, handicap) {
+  const h = state.holes[i];
+  if (h.g == null || h.par == null) return null;
+  const extra = handicap == null ? 0 : strokesReceived(i, handicap);
+  if (extra == null) return null;
+  return Math.max(0, 2 + h.par + extra - h.g);
+}
+const pointsOf = (i) => holePoints(i, handicapValue());
 
 const show = (v) => (v == null ? '' : String(v));
 const signed = (d) => (d === 0 ? 'E' : d > 0 ? '+' + d : String(d));
@@ -190,7 +215,7 @@ function openSheet(i) {
     b.type = 'button';
     b.className = 'opt' + (owner === i ? ' sel' : owner >= 0 ? ' used' : '');
     b.dataset.n = n;
-    b.innerHTML = `${n}<small>${owner === i ? 'este hoyo' : owner >= 0 ? 'hoyo ' + (owner + 1) : 'libre'}</small>`;
+    b.innerHTML = `${n}<small>${owner === i ? 'este' : owner >= 0 ? 'hoyo ' + (owner + 1) : '&nbsp;'}</small>`;
     grid.append(b);
   }
   $('sheet').hidden = false; $('sheetBack').hidden = false;
@@ -201,7 +226,7 @@ function setHcp(n) {
   // Cada número solo puede estar en un hoyo: se quita del anterior
   if (n != null) state.holes.forEach((h, j) => { if (h.hcp === n && j !== i) { h.hcp = null; refreshRow(j); } });
   state.holes[i].hcp = n;
-  save(); refreshRow(i); closeSheet();
+  save(); refreshAll(); closeSheet();
 }
 rowsEl.addEventListener('click', (e) => {
   const b = e.target.closest('[data-hcp]');
