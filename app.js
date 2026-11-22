@@ -1,23 +1,55 @@
 'use strict';
-// Tarjeta de golf: par y dificultad por hoyo (datos del campo) y golpes de la ronda.
+// Tarjeta de golf: par y dificultad por hoyo (datos del campo) y, para cada uno de
+// los 4 jugadores, nombre, hándicap y golpes de la ronda.
 const KEY = 'golf-v1';
 const HOLES = 18;
 const MAX_HCP = 18;
+const PLAYERS = 4;
 
-const blankHole = () => ({ par: null, hcp: null, g: null, s: null, p: null });
+const blankHole = () => ({ par: null, hcp: null });
+const blankScore = () => ({ g: null, s: null, p: null });
+const blankScores = () => Array.from({ length: HOLES }, blankScore);
+const blankPlayer = () => ({ name: '', handicap: '', scores: blankScores() });
+const blankState = () => ({
+  course: '', active: 0,
+  holes: Array.from({ length: HOLES }, blankHole),
+  players: Array.from({ length: PLAYERS }, blankPlayer),
+});
 
 function load() {
   const raw = localStorage.getItem(KEY);
-  if (!raw) return { course: '', handicap: '', holes: Array.from({ length: HOLES }, blankHole) };
+  if (!raw) return blankState();
   try {
     const d = JSON.parse(raw);
-    const holes = Array.from({ length: HOLES }, (_, i) => Object.assign(blankHole(), (d.holes || [])[i]));
-    return { course: d.course || '', handicap: d.handicap || '', holes };
+    const st = blankState();
+    st.course = d.course || '';
+    st.holes = st.holes.map((h, i) => {
+      const o = (d.holes || [])[i] || {};
+      return { par: o.par ?? null, hcp: o.hcp ?? null };
+    });
+    if (Array.isArray(d.players)) {
+      st.players = st.players.map((pl, k) => {
+        const o = d.players[k] || {};
+        return {
+          name: o.name || '', handicap: o.handicap || '',
+          scores: pl.scores.map((sc, i) => Object.assign(sc, (o.scores || [])[i])),
+        };
+      });
+      st.active = Math.min(PLAYERS - 1, Math.max(0, d.active | 0));
+    } else {
+      // Versión anterior, de un solo jugador: sus golpes pasan al jugador 1
+      st.players[0].handicap = d.handicap || '';
+      st.players[0].scores = st.players[0].scores.map((sc, i) => {
+        const o = (d.holes || [])[i] || {};
+        return { g: o.g ?? null, s: o.s ?? null, p: o.p ?? null };
+      });
+    }
+    return st;
   } catch (e) {
     // No sobrescribir datos que no se han podido leer
     localStorage.setItem(KEY + '-backup-' + Date.now(), raw);
     alert('No se pudieron leer los datos guardados. Se ha hecho una copia de seguridad.');
-    return { course: '', handicap: '', holes: Array.from({ length: HOLES }, blankHole) };
+    return blankState();
   }
 }
 
@@ -26,14 +58,17 @@ const save = () => localStorage.setItem(KEY, JSON.stringify(state));
 const $ = (id) => document.getElementById(id);
 const rowsEl = $('rows');
 
-const sum = (from, to, f) => {
+const player = (k = state.active) => state.players[k];
+// Valor de un dato del hoyo i: par y dificultad son del campo; el resto, del jugador
+const val = (i, f, k = state.active) => (f === 'par' || f === 'hcp' ? state.holes[i][f] : player(k).scores[i][f]);
+const sum = (f, k = state.active) => {
   let t = 0, any = false;
-  for (let i = from; i < to; i++) { const v = state.holes[i][f]; if (v != null) { t += v; any = true; } }
+  for (let i = 0; i < HOLES; i++) { const v = val(i, f, k); if (v != null) { t += v; any = true; } }
   return any ? t : null;
 };
 // Hándicap del jugador como número (admite coma decimal), o null si está vacío
-const handicapValue = () => {
-  const v = parseFloat(String(state.handicap).replace(',', '.'));
+const handicapValue = (k = state.active) => {
+  const v = parseFloat(String(player(k).handicap).replace(',', '.'));
   return Number.isFinite(v) ? v : null;
 };
 
@@ -60,14 +95,20 @@ function strokesReceived(i, handicap) {
 }
 
 // Puntos Stableford: 2 por hacer el par neto, +1 por cada golpe menos, −1 por cada golpe más, mínimo 0.
-function holePoints(i, handicap) {
-  const h = state.holes[i];
-  if (h.g == null || h.par == null) return null;
+function holePoints(i, k) {
+  const par = state.holes[i].par, g = player(k).scores[i].g;
+  if (g == null || par == null) return null;
+  const handicap = handicapValue(k);
   const extra = handicap == null ? 0 : strokesReceived(i, handicap);
   if (extra == null) return null;
-  return Math.max(0, 2 + h.par + extra - h.g);
+  return Math.max(0, 2 + par + extra - g);
 }
-const pointsOf = (i) => holePoints(i, handicapValue());
+const pointsOf = (i, k = state.active) => holePoints(i, k);
+const totalPoints = (k) => {
+  let t = 0, any = false;
+  for (let i = 0; i < HOLES; i++) { const v = pointsOf(i, k); if (v != null) { t += v; any = true; } }
+  return any ? t : null;
+};
 
 const show = (v) => (v == null ? '' : String(v));
 const signed = (d) => (d === 0 ? 'E' : d > 0 ? '+' + d : String(d));
@@ -81,7 +122,7 @@ function cellInput(i, f) {
   inp.maxLength = 2;
   inp.autocomplete = 'off';
   inp.dataset.i = i; inp.dataset.f = f;
-  inp.value = show(state.holes[i][f]);
+  inp.value = show(val(i, f));
   inp.setAttribute('aria-label', `Hoyo ${i + 1} ${f}`);
   return inp;
 }
@@ -119,13 +160,19 @@ function build() {
   for (let i = 0; i < HOLES; i++) {
     rowsEl.append(holeRow(i));
   }
-  const all = totalRow('Total', 'grand'); all.range = [0, 18]; totals.push(all); rowsEl.append(all);
-  $('course').value = state.course;
-  $('handicap').value = state.handicap;
+  const all = totalRow('Total', 'grand'); totals.push(all); rowsEl.append(all);
+  const box = $('players');
+  for (let k = 0; k < PLAYERS; k++) {
+    const d = document.createElement('div');
+    d.className = 'player'; d.dataset.k = k;
+    d.innerHTML = `<input type="text" maxlength="14" placeholder="Jugador ${k + 1}" autocomplete="off" enterkeyhint="done"
+      aria-label="Nombre del jugador ${k + 1}"><span class="pinfo"></span>`;
+    box.append(d);
+  }
 }
 
 function refreshRow(i) {
-  const h = state.holes[i];
+  const h = Object.assign({}, state.holes[i], player().scores[i]);
   const tr = rowsEl.querySelector(`tr[data-i="${i}"]`);
   // Los golpes cortos más los putts no pueden superar el total de golpes
   const bad = h.g != null && (h.s || 0) + (h.p || 0) > h.g;
@@ -142,23 +189,37 @@ function refreshRow(i) {
 
 function refreshTotals() {
   for (const t of totals) {
-    for (const f of ['par', 'g', 's', 'p']) t.querySelector(`[data-t="${f}"]`).textContent = show(sum(t.range[0], t.range[1], f));
+    for (const f of ['par', 'g', 's', 'p']) t.querySelector(`[data-t="${f}"]`).textContent = show(sum(f));
+    t.querySelector('[data-t="pts"]').textContent = show(totalPoints(state.active));
   }
-  let pt = 0, anyPt = false;
-  for (let i = 0; i < HOLES; i++) { const v = pointsOf(i); if (v != null) { pt += v; anyPt = true; } }
-  for (const t of totals) t.querySelector('[data-t="pts"]').textContent = anyPt ? pt : '';
-  $('sumPoints').textContent = anyPt ? pt : '–';
-  const g = sum(0, HOLES, 'g');
-  $('sumStrokes').textContent = g == null ? '–' : g;
-  const par = sum(0, HOLES, 'par');
-  $('sumPar').textContent = par == null ? '–' : par;
-  const p = sum(0, HOLES, 'p');
-  $('sumPutts').textContent = p == null ? '–' : p;
-  // Diferencia solo sobre los hoyos jugados que tienen par
+  const dash = (v) => (v == null ? '–' : v);
+  $('sumPoints').textContent = dash(totalPoints(state.active));
+  $('sumStrokes').textContent = dash(sum('g'));
+  $('sumPutts').textContent = dash(sum('p'));
+  $('sumDiff').textContent = dash(diffPar(state.active));
+  refreshPlayers();
+}
+
+// Diferencia con el par, solo sobre los hoyos jugados que tienen par
+function diffPar(k) {
   let d = 0, any = false;
-  for (const h of state.holes) if (h.g != null && h.par != null) { d += h.g - h.par; any = true; }
-  const el = $('sumDiff');
-  el.textContent = any ? signed(d) : '–';
+  for (let i = 0; i < HOLES; i++) {
+    const g = val(i, 'g', k), par = state.holes[i].par;
+    if (g != null && par != null) { d += g - par; any = true; }
+  }
+  return any ? signed(d) : null;
+}
+
+// Cabecera de jugadores: nombre y, debajo, golpes y puntos de cada uno
+function refreshPlayers() {
+  $('players').querySelectorAll('.player').forEach((d) => {
+    const k = +d.dataset.k;
+    d.classList.toggle('on', k === state.active);
+    const inp = d.querySelector('input');
+    if (document.activeElement !== inp) inp.value = player(k).name;
+    const g = sum('g', k), pt = totalPoints(k);
+    d.querySelector('.pinfo').textContent = g == null ? '\u00a0' : `${g} g · ${pt == null ? '–' : pt} p`;
+  });
 }
 
 function refreshAll() {
@@ -171,8 +232,8 @@ rowsEl.addEventListener('input', (e) => {
   if (!inp.dataset.f) return;
   const clean = inp.value.replace(/\D/g, '').slice(0, 2);
   if (clean !== inp.value) inp.value = clean;
-  const i = +inp.dataset.i;
-  state.holes[i][inp.dataset.f] = clean === '' ? null : parseInt(clean, 10);
+  const i = +inp.dataset.i, f = inp.dataset.f;
+  (f === 'par' ? state.holes[i] : player().scores[i])[f] = clean === '' ? null : parseInt(clean, 10);
   save();
   refreshRow(i);
   refreshTotals();
@@ -195,10 +256,27 @@ $('course').addEventListener('input', (e) => { state.course = e.target.value; sa
 $('handicap').addEventListener('input', (e) => {
   const clean = e.target.value.replace(/[^\d.,]/g, '');
   if (clean !== e.target.value) e.target.value = clean;
-  state.handicap = clean;
+  player().handicap = clean;
   save(); refreshAll();
 });
 $('handicap').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
+// Tocar un jugador lo selecciona; tocar el seleccionado permite escribir su nombre
+$('players').addEventListener('click', (e) => {
+  const d = e.target.closest('.player');
+  if (!d || +d.dataset.k === state.active) return;
+  setActive(+d.dataset.k);
+});
+$('players').addEventListener('input', (e) => {
+  const k = +e.target.closest('.player').dataset.k;
+  player(k).name = e.target.value;
+  save();
+});
+$('players').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
+function setActive(k) {
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  state.active = k;
+  save(); reloadInputs();
+}
 $('course').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
 
 // --- Selector de dificultad ---
@@ -241,25 +319,26 @@ $('sheetClose').addEventListener('click', closeSheet);
 $('sheetBack').addEventListener('click', closeSheet);
 
 function reloadInputs() {
-  rowsEl.querySelectorAll('input[data-f]').forEach((inp) => { inp.value = show(state.holes[+inp.dataset.i][inp.dataset.f]); });
+  rowsEl.querySelectorAll('input[data-f]').forEach((inp) => { inp.value = show(val(+inp.dataset.i, inp.dataset.f)); });
   $('course').value = state.course;
-  $('handicap').value = state.handicap;
+  $('handicap').value = player().handicap;
   refreshAll();
 }
 $('newRound').addEventListener('click', () => {
-  if (!confirm('¿Empezar una ronda nueva? Se borran los golpes de todos los hoyos.')) return;
-  for (const h of state.holes) { h.g = null; h.s = null; h.p = null; }
+  if (!confirm('¿Empezar una ronda nueva? Se borran los golpes de los 4 jugadores.')) return;
+  for (const pl of state.players) pl.scores = blankScores();
   save(); reloadInputs(); document.querySelector('main').scrollTop = 0;
 });
 $('resetCourse').addEventListener('click', () => {
   if (!confirm('¿Borrar todo? Se pierden el par, la dificultad, el nombre del campo y los golpes.')) return;
   state.course = '';
   state.holes = Array.from({ length: HOLES }, blankHole);
+  for (const pl of state.players) pl.scores = blankScores();
   save(); reloadInputs(); document.querySelector('main').scrollTop = 0;
 });
 
 build();
-refreshAll();
+reloadInputs();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

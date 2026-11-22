@@ -19,15 +19,21 @@ button { font: inherit; }
 
 .top { flex: none; z-index: 3; background: var(--bg);
   padding: calc(env(safe-area-inset-top) + 8px) 8px 0; }
-.head-row { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
-.handicap { flex: none; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
-.handicap input { width: 64px; height: 34px; border: 1.5px solid transparent; border-radius: 8px; background: var(--card);
-  color: var(--text); text-align: center; font-size: 17px; font-weight: 600; outline: none; padding: 0; }
-.handicap input:focus { border-color: var(--accent); }
-.course { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text);
+.course { width: calc(100% - 8px); margin: 0 4px; border: 0; background: transparent; color: var(--text);
   font-size: 22px; font-weight: 700; padding: 4px 2px; outline: none; }
 .course::placeholder { color: var(--muted); font-weight: 600; }
-.summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 4px; }
+.players { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; }
+.player { border-radius: 10px; padding: 5px 4px 4px; text-align: center; border: 1.5px solid transparent; background: var(--sub); }
+.player.on { background: var(--card); border-color: var(--accent); }
+.player input { width: 100%; border: 0; background: transparent; color: var(--text); text-align: center;
+  font-size: 16px; font-weight: 600; padding: 0; outline: none; text-overflow: ellipsis; pointer-events: none; }
+.player.on input { pointer-events: auto; }
+.player input::placeholder { color: var(--muted); font-weight: 500; }
+.player .pinfo { display: block; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.stat.hc input { width: 100%; border: 0; background: transparent; color: var(--accent); text-align: center;
+  font-size: 19px; font-weight: 700; padding: 0; outline: none; display: block; }
+.stat.hc input::placeholder { color: var(--muted); }
+.summary { margin-top: 6px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 4px; }
 .stat { background: var(--card); border-radius: 10px; padding: 6px 4px; text-align: center; }
 .stat .num { display: block; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .stat .lbl { font-size: 11px; color: var(--muted); }

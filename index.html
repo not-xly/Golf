@@ -18,16 +18,12 @@
 </head>
 <body>
   <header class="top">
-    <div class="head-row">
-      <input id="course" class="course" type="text" placeholder="Campo" autocomplete="off" enterkeyhint="done">
-      <label class="handicap"><span>Hándicap</span>
-        <input id="handicap" type="text" inputmode="decimal" maxlength="5" placeholder="–" autocomplete="off" enterkeyhint="done">
-      </label>
-    </div>
+    <input id="course" class="course" type="text" placeholder="Campo" autocomplete="off" enterkeyhint="done">
+    <div class="players" id="players"></div>
     <div class="summary">
+      <label class="stat hc"><input id="handicap" type="text" inputmode="decimal" maxlength="5" placeholder="–" autocomplete="off" enterkeyhint="done"><span class="lbl">hándicap</span></label>
       <div class="stat"><span class="num" id="sumStrokes">–</span><span class="lbl">golpes</span></div>
       <div class="stat"><span class="num" id="sumDiff">–</span><span class="lbl">vs par</span></div>
-      <div class="stat"><span class="num" id="sumPar">–</span><span class="lbl">par</span></div>
       <div class="stat"><span class="num" id="sumPutts">–</span><span class="lbl">putts</span></div>
       <div class="stat"><span class="num" id="sumPoints">–</span><span class="lbl">puntos</span></div>
     </div>
@@ -50,9 +46,9 @@
 
     <div class="actions">
       <button type="button" class="btn" id="newRound">Nueva ronda</button>
-      <p class="hint">Borra los golpes y conserva el par y la dificultad del campo.</p>
+      <p class="hint">Borra los golpes de los 4 jugadores y conserva el campo, los nombres y los hándicaps.</p>
       <button type="button" class="btn danger" id="resetCourse">Borrar campo</button>
-      <p class="hint">Borra también el par, la dificultad y el nombre.</p>
+      <p class="hint">Borra también el par, la dificultad y el nombre del campo.</p>
     </div>
   </main>
 
