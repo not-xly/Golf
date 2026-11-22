@@ -78,9 +78,7 @@ function build() {
   rowsEl.textContent = '';
   for (let i = 0; i < HOLES; i++) {
     rowsEl.append(holeRow(i));
-    if (i === 8) { const t = totalRow('Ida', 'out'); t.range = [0, 9]; totals.push(t); rowsEl.append(t); }
   }
-  const back = totalRow('Vuelta', 'in'); back.range = [9, 18]; totals.push(back); rowsEl.append(back);
   const all = totalRow('Total', 'grand'); all.range = [0, 18]; totals.push(all); rowsEl.append(all);
   $('course').value = state.course;
 }
@@ -88,12 +86,6 @@ function build() {
 function refreshRow(i) {
   const h = state.holes[i];
   const tr = rowsEl.querySelector(`tr[data-i="${i}"]`);
-  const g = tr.querySelector('[data-f="g"]');
-  g.classList.remove('under', 'bogey', 'double');
-  if (h.g != null && h.par != null) {
-    const d = h.g - h.par;
-    if (d < 0) g.classList.add('under'); else if (d === 1) g.classList.add('bogey'); else if (d > 1) g.classList.add('double');
-  }
   // Los golpes cortos más los putts no pueden superar el total de golpes
   const bad = h.g != null && (h.s || 0) + (h.p || 0) > h.g;
   for (const f of ['g', 's', 'p']) tr.querySelector(`[data-f="${f}"]`).classList.toggle('warn', bad);
@@ -118,8 +110,6 @@ function refreshTotals() {
   for (const h of state.holes) if (h.g != null && h.par != null) { d += h.g - h.par; any = true; }
   const el = $('sumDiff');
   el.textContent = any ? signed(d) : '–';
-  el.classList.toggle('over', any && d > 0);
-  el.classList.toggle('under', any && d < 0);
 }
 
 function refreshAll() {
@@ -202,24 +192,17 @@ function reloadInputs() {
 $('newRound').addEventListener('click', () => {
   if (!confirm('¿Empezar una ronda nueva? Se borran los golpes de todos los hoyos.')) return;
   for (const h of state.holes) { h.g = null; h.s = null; h.p = null; }
-  save(); reloadInputs(); window.scrollTo(0, 0);
+  save(); reloadInputs(); document.querySelector('main').scrollTop = 0;
 });
 $('resetCourse').addEventListener('click', () => {
   if (!confirm('¿Borrar todo? Se pierden el par, la dificultad, el nombre del campo y los golpes.')) return;
   state.course = '';
   state.holes = Array.from({ length: HOLES }, blankHole);
-  save(); reloadInputs(); window.scrollTo(0, 0);
+  save(); reloadInputs(); document.querySelector('main').scrollTop = 0;
 });
-
-// La cabecera de la tabla se queda fija justo debajo del resumen
-function setHeadOffset() {
-  document.documentElement.style.setProperty('--head-h', $('course').closest('.top').offsetHeight + 'px');
-}
-window.addEventListener('resize', setHeadOffset);
 
 build();
 refreshAll();
-setHeadOffset();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
